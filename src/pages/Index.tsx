@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EquityData, EditedField } from "@/types/equity";
 import { MetadataSection } from "@/components/equity/MetadataSection";
 import { CapitalSection } from "@/components/equity/CapitalSection";
@@ -6,6 +6,8 @@ import { ReservesSection } from "@/components/equity/ReservesSection";
 import { RetainedEarningsSection } from "@/components/equity/RetainedEarningsSection";
 import { TotalEquitySection } from "@/components/equity/TotalEquitySection";
 import { FinancialNotesSection } from "@/components/equity/FinancialNotesSection";
+import { FileUpload } from "@/components/equity/FileUpload";
+import { ApiEndpointSettings } from "@/components/equity/ApiEndpointSettings";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Save, AlertCircle } from "lucide-react";
@@ -129,12 +131,33 @@ const sampleData: EquityData = {
 };
 
 const Index = () => {
-  const [equityData, setEquityData] = useState<EquityData>(sampleData);
+  const [equityData, setEquityData] = useState<EquityData | null>(null);
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
   const [editHistory, setEditHistory] = useState<EditedField[]>([]);
+  const [apiEndpoint, setApiEndpoint] = useState<string>(
+    "https://unsymmetrical-pseudomorular-nancey.ngrok-free.dev/extract"
+  );
+  const [hasUploadedData, setHasUploadedData] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Load saved API endpoint from localStorage
+    const savedEndpoint = localStorage.getItem("equity_api_endpoint");
+    if (savedEndpoint) {
+      setApiEndpoint(savedEndpoint);
+    }
+  }, []);
+
+  const handleDataExtracted = (data: any) => {
+    setEquityData(data);
+    setHasUploadedData(true);
+    setEditedFields(new Set());
+    setEditHistory([]);
+  };
+
   const handleEdit = (path: string, year: "current" | "previous", value: number | string | null) => {
+    if (!equityData) return;
+
     const fullPath = `${path}.${year}_year.value`;
     
     // Create a deep copy and update the value
@@ -198,7 +221,11 @@ const Index = () => {
                   {editedFields.size} تعديل / edits
                 </Badge>
               )}
-              <Button onClick={handleSave} disabled={editedFields.size === 0}>
+              <ApiEndpointSettings
+                endpoint={apiEndpoint}
+                onEndpointChange={setApiEndpoint}
+              />
+              <Button onClick={handleSave} disabled={editedFields.size === 0 || !equityData}>
                 <Save className="h-4 w-4 mr-2" />
                 حفظ / Save
               </Button>
@@ -210,37 +237,73 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="space-y-8">
-          <MetadataSection metadata={equityData.metadata} />
-          
-          <div className="border-t pt-8">
-            <CapitalSection
-              equityComponents={equityData.equity_components}
-              onEdit={handleEdit}
-              editedFields={editedFields}
-            />
-          </div>
+          {!hasUploadedData ? (
+            <div className="max-w-2xl mx-auto">
+              <FileUpload
+                onDataExtracted={handleDataExtracted}
+                apiEndpoint={apiEndpoint}
+              />
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold mb-2 text-sm" dir="rtl">
+                  كيفية الاستخدام / How to Use
+                </h3>
+                <ol className="text-sm space-y-2 text-muted-foreground" dir="rtl">
+                  <li>1. قم بتحميل ملف PDF للبيان المالي</li>
+                  <li>2. سيتم استخراج البيانات تلقائيًا</li>
+                  <li>3. مراجعة وتحرير البيانات حسب الحاجة</li>
+                  <li>4. احفظ التغييرات</li>
+                </ol>
+              </div>
+            </div>
+          ) : equityData ? (
+            <>
+              <MetadataSection metadata={equityData.metadata} />
+              
+              <div className="border-t pt-8">
+                <CapitalSection
+                  equityComponents={equityData.equity_components}
+                  onEdit={handleEdit}
+                  editedFields={editedFields}
+                />
+              </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ReservesSection
-              equityComponents={equityData.equity_components}
-              onEdit={handleEdit}
-              editedFields={editedFields}
-            />
-            
-            <RetainedEarningsSection
-              equityComponents={equityData.equity_components}
-              onEdit={handleEdit}
-              editedFields={editedFields}
-            />
-          </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <ReservesSection
+                  equityComponents={equityData.equity_components}
+                  onEdit={handleEdit}
+                  editedFields={editedFields}
+                />
+                
+                <RetainedEarningsSection
+                  equityComponents={equityData.equity_components}
+                  onEdit={handleEdit}
+                  editedFields={editedFields}
+                />
+              </div>
 
-          <TotalEquitySection
-            equityComponents={equityData.equity_components}
-            onEdit={handleEdit}
-            editedFields={editedFields}
-          />
+              <TotalEquitySection
+                equityComponents={equityData.equity_components}
+                onEdit={handleEdit}
+                editedFields={editedFields}
+              />
 
-          <FinancialNotesSection notes={equityData.financial_notes} />
+              <FinancialNotesSection notes={equityData.financial_notes} />
+
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEquityData(null);
+                    setHasUploadedData(false);
+                    setEditedFields(new Set());
+                    setEditHistory([]);
+                  }}
+                >
+                  تحميل ملف جديد / Upload New File
+                </Button>
+              </div>
+            </>
+          ) : null}
         </div>
       </main>
     </div>
