@@ -12,16 +12,17 @@ export const BilingualText = ({ arabic, english, className }: BilingualTextProps
 
   return (
     <span
-      className={cn("relative cursor-help transition-all", className)}
+      className={cn("relative cursor-help inline-block", className)}
       onMouseEnter={() => setShowEnglish(true)}
       onMouseLeave={() => setShowEnglish(false)}
     >
-      <span className={cn("transition-opacity", showEnglish && "opacity-0")}>
+      <span>
         {arabic}
       </span>
       {showEnglish && (
-        <span className="absolute inset-0 text-accent font-medium animate-in fade-in-0 slide-in-from-top-1 duration-200">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-accent text-accent-foreground text-sm font-medium rounded-md shadow-lg whitespace-nowrap animate-in fade-in-0 slide-in-from-bottom-2 duration-200 z-50">
           {english}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-accent"></span>
         </span>
       )}
     </span>
